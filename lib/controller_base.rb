@@ -1,13 +1,15 @@
+require 'byebug'
 require 'active_support'
 require 'active_support/core_ext'
 require 'erb'
 require_relative './session'
+require_relative './flash'
 
 class ControllerBase
   attr_reader :req, :res, :params
 
   # Setup the controller
-  def initialize(req, res)
+  def initialize(req, res, route_params = {})
     @req, @res = req, res
     @params = route_params.merge(req.params)
     @already_built_response = false
@@ -41,10 +43,12 @@ class ControllerBase
     nil
   end
 
+  # Phase 3
+
   # use ERB and binding to evaluate templates
   # pass the rendered html to render_content
   def render(template_name)
-    dir_path = File.dirname(__File__)
+    dir_path = File.dirname(__FILE__)
     template_fname = File.join(
       dir_path, "..",
       "views", self.class.name.underscore, "#{template_name}.html.erb"
@@ -123,4 +127,3 @@ class ControllerBase
     SecureRandom.urlsafe_base64(16)
   end
 end
-
