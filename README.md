@@ -2,37 +2,64 @@
 MSG MVC is a lightweight MVC Framework inspired by Ruby on Rails. 
 
 Functionality:
-* Interact with the database through a SQLObject
-* Query the database with methods such as all and where
-* Build associations that use joins
+* Rayquaza ORM
+* Basic Search Functions
+* Model Associations 
+* Controllers with flash and session functionality
+* CSRF attack protection
+* Regex routing
+* Middleware
+* Server Integration
 
-## SQLObject
-The RayquazaORM library uses a class, SQLObject that interacts with the database.  
+## ORM
+MSG MVC incorporates all the functionality of RayquazaORM, a lightweight Object Relational Mapping system that supports PostgreSQL queries.  For more, see [RayquazaORM](https://github.com/andrewlidong/RayquazaORM)
 
-1. SQLObject can return an array of all records in the database
+1. Basic search functions such as all and find
 
-2. SQLObject can look up a single record by primary key
+2. Insert and update values
 
-3. SQLObject can insert new rows and update rows with appropriate id.  
+3. Build associations such as has_many, belongs_to and has_one_through
 
-## SQLObject
+## Flash and Session Functions
 
-#### `table_name`
-Gets the name of the table for a class.  
+#### `flash`
+Returns a hash-like object that is available for the current and next request cycle.  Receives a request and retrieves its contents from a cookie.  
 
-#### `table_name=`
-Sets the name of a table.  In the absence of an explicitly set table name, table_name= by default converts the class name to snake_case and pluralizes.  
+#### `flash.now`
+Returns a hash-like object that is available for the current cycle.  
 
 Example:
 ```rb
-class Pokemon < SQLObject
-end
+class Flash
+  attr_reader :now
 
-Pokemon.table_name # => "pokemon"
+  def initialize(req)
+    cookie = req.cookies['_rails_lite_app_flash']
+
+    @now = cookie ? JSON.parse(cookie) : {}
+    @flash = {}
+  end
+
+  def [](key)
+    @now[key.to_s] || @flash[key.to_s]
+  end
+
+  def []=(key, value)
+    @flash[key.to_s] = value
+  end
+
+  def store_flash(res)
+    res.set_cookie('_rails_lite_app_flash', value: @flash.to_json, path: '/')
+  end
+end
 ```
 
-#### `initialize`
-Takes in a single params hash that iterates through each of the `attr_name, value` pairs.  
+#### `Middleware`
+Middleware returns properly formatted errors.  Specifically, ours renders the following:
+
+* The stack trace
+* A preview of the source code where the exception was raised
+* The exception message
 
 Example: 
 
