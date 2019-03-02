@@ -1,45 +1,140 @@
-# MSG_MVC
+# MSG MVC
+MSG MVC is a lightweight MVC Framework inspired by Ruby on Rails. 
 
-## About
+Functionality:
+* Interact with the database through a SQLObject
+* Query the database with methods such as all and where
+* Build associations that use joins
 
-MSG_MVC is a lightweight MVC framework built with Ruby.  
+## SQLObject
+The RayquazaORM library uses a class, SQLObject that interacts with the database.  
 
-## Architecture and Technologies
+1. SQLObject can return an array of all records in the database
 
-The project is implemented with the following technologies:
+2. SQLObject can look up a single record by primary key
 
-- Technology 1
+3. SQLObject can insert new rows and update rows with appropriate id.  
 
-## Technical Implementation
+## SQLObject
 
-Some technical highlights of the app are:
-1. Metaprogramming methods `define_method`, `instance_variable_get` and `instance_variable_set`
+#### `table_name`
+Gets the name of the table for a class.  
 
-NB: you cannot always infer the name of the table. For example: the inflector library will, by default, pluralize human into humen, not humans. WAT. That's what your ::table_name= is for: so users of SQLObject can override the default, inferred table name.
+#### `table_name=`
+Sets the name of a table.  In the absence of an explicitly set table name, table_name= by default converts the class name to snake_case and pluralizes.  
 
-### Feature 1
+Example:
+```rb
+class Pokemon < SQLObject
+end
 
-Implemented attr_accessor getter and setter methods using `define_method`, `instance_variable_get` and `instance_variable_set`
-
-```ruby
-  // from 00_attr_accessor_object.rb
-
-  class AttrAccessorObject
-    def self.my_attr_accessor(*names)
-      names.each do |name|
-        define_method(name) do
-          instance_variable_get("@#{name}")
-        end
-
-        define_method("#{name}=") do |value|
-          instance_variable_set("@#{name}", value)
-        end
-      end
-    end
-  end
+Pokemon.table_name # => "pokemon"
 ```
 
-## Future Features
-In the future, I plan to add the following features:
+#### `initialize`
+Takes in a single params hash that iterates through each of the `attr_name, value` pairs.  
 
-*
+Example: 
+
+```rb
+lugia = Pokemon.new(name: "Hobbes", trainer_id: 123)
+lugia.name #=> "Hobbes"
+lugia.trainer_id #=> 123
+```
+## Queries
+
+#### `all`
+
+Fetches all records from the database.  
+
+Example: 
+
+```rb
+class Pokemon < SQLObject
+  finalize!
+end
+
+Pokemon.all
+# SELECT
+#   pokemon.*
+# FROM
+#   pokemon
+
+class PokemonTrainer < SQLObject
+  self.table_name = "pokemon_trainers"
+
+  finalize!
+end
+
+PokemonTrainer.all
+# SELECT
+#   pokemon_trainers.*
+# FROM
+#   pokemon_trainers
+
+class Pokemon < SQLObject
+  self.table_name = "pokemon"
+
+  finalize!
+end
+
+Pokemon.all
+=> [#<Pokemon:0x007fa409ceee38
+  @attributes={:id=>1, :name=>"Hobbes", :trainer_id=>1}>,
+ #<Pokemon:0x007fa409cee988
+  @attributes={:id=>2, :name=>"Smith", :trainer_id=>1}>,
+ #<Pokemon:0x007fa409cee528
+  @attributes={:id=>3, :name=>"Kant", :trainer_id=>2}>]
+```
+
+#### `find( id )`
+
+Returns a single object with the given id.  
+
+#### `insert( value )`
+
+Inserts values into table name.  
+
+Example:
+
+```rb
+INSERT INTO
+  table_name (col1, col2, col3)
+VALUES
+  (?, ?, ?)
+```
+
+#### `update( id, value )`
+
+Updates a record's attributes
+
+Example: 
+
+```rb
+UPDATE
+  table_name
+SET
+  col1 = ?, col2 = ?, col3 = ?
+WHERE
+  id = ?
+```
+
+#### `save`
+
+Calls insert or update depending on whether an id is passed or not.  
+
+## Associatable
+
+A module that has methods such as belongs_to and has_many that will be mixed into SQLObject
+
+#### `belongs_to`
+
+Takes in an association name and an options hash, builds an association.  
+
+#### `has_many`
+
+Takes in an association and an options hash, builds an association.  
+
+#### `has_one_through`
+
+Takes an association and an options hash, builds association between models through the use of a joins table.  
