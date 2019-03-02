@@ -12,7 +12,7 @@ Functionality:
 * Server Integration
 
 ## ORM
-MSG MVC incorporates all the functionality of RayquazaORM, a lightweight Object Relational Mapping system that supports PostgreSQL queries.  For more, see [RayquazaORM](https://github.com/andrewlidong/RayquazaORM)
+MSG MVC incorporates all the functionality of RayquazaORM, a lightweight Object Relational Mapping system that supports SQL queries.  For more details click [here](https://github.com/andrewlidong/RayquazaORM)
 
 1. Basic search functions such as all and find
 
