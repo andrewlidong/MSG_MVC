@@ -16,7 +16,7 @@ class ActiveController
   end
 
   def redirect_to(url)
-    raise "Double Render Error FOOL" if already_built_response?
+    raise "Double Render Error" if already_built_response?
     @res.location = url
     @res.status = 302
     session.store_session(@res)
@@ -25,7 +25,7 @@ class ActiveController
   end
 
   def render_content(content, content_type)
-    raise "Double Render Error FOOL" if already_built_response?
+    raise "Double Render Error" if already_built_response?
     @res.write(content)
     @res["Content-Type"] = content_type
     session.store_session(@res)

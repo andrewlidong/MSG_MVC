@@ -15,12 +15,55 @@ Functionality:
 MSG MVC incorporates all the functionality of RayquazaORM, a lightweight Object Relational Mapping system that supports SQL queries.  For more details click [here](https://github.com/andrewlidong/RayquazaORM)
 
 1. Basic search functions such as all and find
-
 2. Insert and update values
-
 3. Build associations such as has_many, belongs_to and has_one_through
 
 ## Flash and Session Functions
+
+#### `redirect_to (url)`
+Redirects to particular render.  Returns an error if already built.  
+
+Example:
+```rb
+  def redirect_to(url)
+    raise "Double Render Error" if already_built_response?
+    @res.location = url
+    @res.status = 302
+    session.store_session(@res)
+    flash.store_flash(@res)
+    @already_built_response = true
+  end
+```
+
+#### `render(content, content_type)`
+Renders view, raising error if already built.  
+
+Example:
+```rb
+  def render_content(content, content_type)
+    raise "Double Render Error" if already_built_response?
+    @res.write(content)
+    @res["Content-Type"] = content_type
+    session.store_session(@res)
+    flash.store_flash(@res)
+    @already_built_response = true
+  end
+
+  def render(template_name)
+    dir_path = File.dirname(__FILE__)
+    template_fname = File.join(
+      dir_path, "..",
+      "views", self.class.name.underscore, "#{template_name}.html.erb"
+    )
+
+    template_code = File.read(template_fname)
+
+    render_content(
+      ERB.new(template_code).result(binding),
+      "text/html"
+    )
+  end
+```
 
 #### `flash`
 Returns a hash-like object that is available for the current and next request cycle.  Receives a request and retrieves its contents from a cookie.  
@@ -54,114 +97,60 @@ class Flash
 end
 ```
 
-#### `Middleware`
-Middleware returns properly formatted errors.  Specifically, ours renders the following:
-
-* The stack trace
-* A preview of the source code where the exception was raised
-* The exception message
+## CSRF Protection
+CSRF is used to determine if a form is valid.  It validates the authenticity token for all requests other than GET requests to the controller.  `form_authenticity_token` provides a way to include the CSRF token in their form.  
 
 Example: 
-
 ```rb
-lugia = Pokemon.new(name: "Hobbes", trainer_id: 123)
-lugia.name #=> "Hobbes"
-lugia.trainer_id #=> 123
-```
-## Queries
+  def protect_from_forgery?
+    @@protect_from_forgery
+  end
 
-#### `all`
+  def form_authenticity_token
+    @token ||= generate_authenticity_token
+    res.set_cookie('authenticity_token', value: @token, path: '/')
+    @token
+  end
 
-Fetches all records from the database.  
+  def check_authenticity_token
+    cookie = @req.cookies["authenticity_token"]
+    unless cookie && cookie == params["authenticity_token"]
+      raise "Invalid authenticity token"
+    end
+  end
 
-Example: 
-
-```rb
-class Pokemon < SQLObject
-  finalize!
-end
-
-Pokemon.all
-# SELECT
-#   pokemon.*
-# FROM
-#   pokemon
-
-class PokemonTrainer < SQLObject
-  self.table_name = "pokemon_trainers"
-
-  finalize!
-end
-
-PokemonTrainer.all
-# SELECT
-#   pokemon_trainers.*
-# FROM
-#   pokemon_trainers
-
-class Pokemon < SQLObject
-  self.table_name = "pokemon"
-
-  finalize!
-end
-
-Pokemon.all
-=> [#<Pokemon:0x007fa409ceee38
-  @attributes={:id=>1, :name=>"Hobbes", :trainer_id=>1}>,
- #<Pokemon:0x007fa409cee988
-  @attributes={:id=>2, :name=>"Smith", :trainer_id=>1}>,
- #<Pokemon:0x007fa409cee528
-  @attributes={:id=>3, :name=>"Kant", :trainer_id=>2}>]
+  def generate_authenticity_token
+    SecureRandom.urlsafe_base64(16)
+  end
 ```
 
-#### `find( id )`
-
-Returns a single object with the given id.  
-
-#### `insert( value )`
-
-Inserts values into table name.  
+## Regex Routing
+We require a route's pattern argument to be a regular expression.  
 
 Example:
-
 ```rb
-INSERT INTO
-  table_name (col1, col2, col3)
-VALUES
-  (?, ?, ?)
+class Route
+  attr_reader :pattern, :http_method, :controller_class, :action_name
+
+  def initialize(pattern, http_method, controller_class, action_name)
+    @http_method = http_method
+    @pattern = pattern
+    @controller_class = controller_class
+    @action_name = action_name
+  end
+
+  def matches?(req)
+    @pattern =~ req.path && @http_method == req.request_method.downcase.to_sym
+  end
+
+  def run(req, res)
+    match_data = @pattern.match(req.path)
+    route_params = Hash[match_data.names.zip(match_data.captures)]
+
+    @controller_class
+      .new(req, res, route_params)
+      .invoke_action(action_name)
+  end
+end
+
 ```
-
-#### `update( id, value )`
-
-Updates a record's attributes
-
-Example: 
-
-```rb
-UPDATE
-  table_name
-SET
-  col1 = ?, col2 = ?, col3 = ?
-WHERE
-  id = ?
-```
-
-#### `save`
-
-Calls insert or update depending on whether an id is passed or not.  
-
-## Associatable
-
-A module that has methods such as belongs_to and has_many that will be mixed into SQLObject
-
-#### `belongs_to`
-
-Takes in an association name and an options hash, builds an association.  
-
-#### `has_many`
-
-Takes in an association and an options hash, builds an association.  
-
-#### `has_one_through`
-
-Takes an association and an options hash, builds association between models through the use of a joins table.  
